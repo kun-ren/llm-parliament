@@ -52,9 +52,17 @@ MODEL_TIERS: dict[str, int] = {
 
 DEFAULT_TIER = 3
 
-# Exceptions after provider-specific normalization; tiers stay in MODEL_TIERS.
+# Explicit API spellings share capability tiers; do not strip tuning/version
+# suffixes globally, since unfamiliar versions and sizes need their own rating.
 MODEL_ALIASES: dict[str, dict[str, str]] = {
-    "openrouter": {"llama-3.3-70b-instruct": "llama-3.3-70b-versatile"},
+    "openrouter": {
+        "gemini-2.0-flash-001": "gemini-2.0-flash",
+        "llama-3.1-70b-instruct": "llama3.1:70b",
+        "llama-3.1-8b-instruct": "llama3.1:8b",
+        "llama-3.3-70b-instruct": "llama-3.3-70b-versatile",
+        "mistral-7b-instruct": "mistral:7b",
+        "gemma-2-9b-it": "gemma2:9b",
+    },
 }
 
 TIER_LABELS: dict[int, str] = {

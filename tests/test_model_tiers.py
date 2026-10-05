@@ -67,13 +67,19 @@ def test_gap_single_member():
     ("openai/gpt-4o", "gpt-4o", 1),
     ("google/gemini-2.5-pro", "gemini-2.5-pro", 1),
     ("google/gemini-2.5-flash", "gemini-2.5-flash", 2),
+    ("google/gemini-2.0-flash-001", "gemini-2.0-flash", 2),
+    ("meta-llama/llama-3.1-70b-instruct", "llama3.1:70b", 2),
+    ("meta-llama/llama-3.1-8b-instruct", "llama3.1:8b", 3),
     ("meta-llama/llama-3.3-70b-instruct", "llama-3.3-70b-versatile", 2),
+    ("mistralai/mistral-7b-instruct", "mistral:7b", 3),
+    ("google/gemma-2-9b-it", "gemma2:9b", 3),
 ])
 @pytest.mark.parametrize("variant", ["", ":free", ":nitro"])
 def test_openrouter_identity_and_variants(model, canonical, tier, variant):
     api_id = model + variant
     assert canonical_model_id(api_id, "openrouter") == canonical
     assert get_tier(api_id, "openrouter") == tier
+    assert has_known_tier(api_id, "openrouter")
     member = resolve_member_tier(Member(name="A", provider_name="openrouter", model=api_id))
     assert member.tier == tier
     assert member.model == api_id
@@ -85,6 +91,34 @@ def test_openrouter_identity_and_variants(model, canonical, tier, variant):
 ])
 def test_other_providers_preserve_model_identity(provider, model):
     assert canonical_model_id(model, provider) == model
+
+
+@pytest.mark.parametrize("model", [
+    "vendor/gpt-4o-instruct",
+    "vendor/gpt-4o-it",
+    "google/gemini-2.0-flash-002",
+    "meta-llama/llama-3.1-13b-instruct",
+    "meta-llama/llama-3.4-70b-instruct",
+    "mistralai/mistral-8b-instruct",
+    "google/gemma-3-9b-it",
+])
+def test_unestablished_suffixes_versions_and_sizes_stay_unknown(model):
+    assert canonical_model_id(model, "openrouter") == model.split("/", 1)[1]
+    assert not has_known_tier(model, "openrouter")
+    assert get_tier(model, "openrouter") == 3
+
+
+@pytest.mark.parametrize("provider", ["ollama", "openai", "custom"])
+@pytest.mark.parametrize("model", [
+    "google/gemini-2.0-flash-001",
+    "meta-llama/llama-3.1-70b-instruct",
+    "meta-llama/llama-3.1-8b-instruct",
+    "mistralai/mistral-7b-instruct",
+    "google/gemma-2-9b-it",
+])
+def test_openrouter_suffix_aliases_do_not_affect_other_providers(provider, model):
+    assert canonical_model_id(model, provider) == model
+    assert not has_known_tier(model, provider)
 
 
 def test_ollama_sizes_remain_distinct():
@@ -110,6 +144,9 @@ def test_known_tier_three_is_distinct_from_unknown():
 @pytest.mark.parametrize(("other", "expected"), [
     ("vendor/unlisted:free", False),
     ("google/gemini-2.5-flash-lite", True),
+    ("meta-llama/llama-3.1-8b-instruct", True),
+    ("mistralai/mistral-7b-instruct", True),
+    ("google/gemma-2-9b-it", True),
 ])
 def test_openrouter_gap_uses_only_known_models(other, expected):
     members = [

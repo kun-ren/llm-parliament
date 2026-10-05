@@ -35,6 +35,18 @@ def test_gap_warning_ignores_unknown_even_when_selecting_warning_names():
     assert "Unknown" not in warnings[0]
 
 
+async def test_openrouter_suffix_aliases_select_stronger_speaker():
+    members = [
+        Member(name="Gemma", provider_name="openrouter", model="google/gemma-2-9b-it"),
+        Member(name="Llama", provider_name="openrouter", model="meta-llama/llama-3.1-70b-instruct"),
+    ]
+    providers = {m.name: MockProvider(model=m.model) for m in members}
+    hansard = await Parliament(members, providers).ask("Which database?")
+    assert hansard.synthesis.speaker_name == "Llama"
+    assert [m.tier for m in hansard.members] == [3, 2]
+    assert [m.model for m in hansard.members] == [p.model for p in providers.values()]
+
+
 @pytest.fixture
 def mock_parliament_3():
     """3-member parliament with mock providers."""

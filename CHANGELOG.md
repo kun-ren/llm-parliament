@@ -88,6 +88,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **OpenRouter model aliases** — recognized Gemini, Llama, Mistral and Gemma
+  API names now receive their existing capability ratings, including known
+  tier-3 models that previously fell back to an unclassified tier 3.
+
 - OpenRouter tier lookup now normalizes vendor prefixes, variants and Claude
   version spelling using the provider context. Known frontier models can be
   selected as Speaker without rewriting their config or API model IDs.
