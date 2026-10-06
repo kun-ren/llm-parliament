@@ -2,6 +2,7 @@
 
 import pytest
 
+from parliament.config import KEY_PROVIDERS
 from parliament.core.model_tiers import (
     MODEL_ALIASES,
     MODEL_TIERS,
@@ -204,9 +205,10 @@ def test_openrouter_gap_uses_only_known_models(other, expected):
     assert detect_gap(members) is expected
 
 
-def test_unknown_members_do_not_form_a_gap():
+@pytest.mark.parametrize("provider", ["ollama", "mock", *KEY_PROVIDERS])
+def test_unknown_members_do_not_form_a_gap_for_any_provider(provider):
     assert not detect_gap([])
     assert not detect_gap([
-        Member(name="A", provider_name="openrouter", model="vendor/unknown", tier=1),
-        Member(name="B", provider_name="openrouter", model="vendor/other", tier=4),
+        Member(name="A", provider_name=provider, model="unassessed-model", tier=1),
+        Member(name="B", provider_name=provider, model="another-unassessed-model", tier=4),
     ])

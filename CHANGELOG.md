@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Capability-gap warnings across all providers** — compare only models with
+  known capability ratings. Unknown models retain fallback tier 3 and remain
+  eligible for Speaker selection, but no longer participate in gap warnings.
+  This changes warning behavior for Ollama, Anthropic, mock and other providers
+  as well as OpenRouter: the fallback is a default, not an assessed rating.
+  Fewer than two known models produce no gap warning.
+
 ### Added
 
 - **OpenRouter first-run preset** — detect `OPENROUTER_API_KEY` and propose
@@ -96,11 +105,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   API names now receive their existing capability ratings, including known
   tier-3 models that previously fell back to an unclassified tier 3.
 
-- OpenRouter tier lookup now normalizes vendor prefixes, variants and Claude
+- **OpenRouter tier lookup** — normalizes vendor prefixes, variants and Claude
   version spelling using the provider context. Known frontier models can be
   selected as Speaker without rewriting their config or API model IDs.
-  Capability-gap warnings exclude unclassified models while retaining their
-  numeric fallback tier. Addresses the tier portion of #37.
+  Addresses the tier portion of #37.
 
 - **`parliament ask --mock` now records the actual model for each member.**
   Mock-B and Mock-C were labeled `mock-v1` despite using `mock-v2` and `mock-v3`.

@@ -2,6 +2,7 @@
 
 import pytest
 
+from parliament.config import KEY_PROVIDERS
 from parliament.core.parliament import Parliament, select_speaker
 from parliament.core.types import Member
 from parliament.providers.mock import MockProvider
@@ -33,6 +34,37 @@ def test_gap_warning_ignores_unknown_even_when_selecting_warning_names():
     assert "Opus (tier 1)" in warnings[0]
     assert "Lite (tier 3)" in warnings[0]
     assert "Unknown" not in warnings[0]
+
+
+@pytest.mark.parametrize("provider", ["ollama", "mock", *KEY_PROVIDERS])
+def test_gap_warnings_exclude_fallback_ratings_for_every_provider(provider):
+    members = [
+        Member(name="Unknown", provider_name=provider, model="unassessed-model"),
+        Member(name="GPT", provider_name="openai", model="gpt-4o"),
+        Member(name="Llama", provider_name="ollama", model="llama3.1"),
+    ]
+    providers = {m.name: MockProvider(model=m.model) for m in members}
+    parliament = Parliament(members[:2], providers)
+    assert [m.tier for m in parliament.members] == [3, 1]
+    assert parliament.check_gaps() == []
+
+    warnings = Parliament(members, providers).check_gaps()
+    assert len(warnings) == 1
+    assert "GPT (tier 1)" in warnings[0]
+    assert "Llama (tier 3)" in warnings[0]
+    assert "Unknown" not in warnings[0]
+
+
+def test_unknown_model_remains_eligible_for_speaker_with_fallback_tier():
+    members = [
+        Member(name="Unknown", provider_name="ollama", model="unassessed-model"),
+        Member(name="Tiny", provider_name="ollama", model="tinyllama"),
+    ]
+    providers = {m.name: MockProvider(model=m.model) for m in members}
+    parliament = Parliament(members, providers)
+    assert [m.tier for m in parliament.members] == [3, 4]
+    assert parliament.check_gaps() == []
+    assert select_speaker(parliament.members, providers)[0].name == "Unknown"
 
 
 async def test_openrouter_suffix_aliases_select_stronger_speaker():
