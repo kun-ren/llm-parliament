@@ -159,7 +159,11 @@ def calculate_gap(members: list[Member]) -> TierGap | None:
 
 
 def detect_gap(members: list[Member]) -> bool:
-    """True when the tier gap between classified members exceeds 1."""
+    """True when the tier gap between classified members exceeds 1.
+    This is used to warn when a Speaker may be needed to bridge the gap.
+    return False when there are not enough classified models to determine a gap,
+    or when the gap is 1 or less.
+    """
     return calculate_gap(members) is not None
 
 
