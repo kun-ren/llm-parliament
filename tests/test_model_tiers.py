@@ -6,6 +6,7 @@ from parliament.config import KEY_PROVIDERS
 from parliament.core.model_tiers import (
     MODEL_ALIASES,
     MODEL_TIERS,
+    calculate_gap,
     canonical_model_id,
     detect_gap,
     get_tier,
@@ -205,10 +206,52 @@ def test_openrouter_gap_uses_only_known_models(other, expected):
     assert detect_gap(members) is expected
 
 
-@pytest.mark.parametrize("provider", ["ollama", "mock", *KEY_PROVIDERS])
+@pytest.mark.parametrize("provider", ["ollama", *KEY_PROVIDERS])
 def test_unknown_members_do_not_form_a_gap_for_any_provider(provider):
     assert not detect_gap([])
     assert not detect_gap([
         Member(name="A", provider_name=provider, model="unassessed-model", tier=1),
         Member(name="B", provider_name=provider, model="another-unassessed-model", tier=4),
     ])
+
+
+@pytest.mark.parametrize(("provider", "model", "base_url"), [
+    ("openai", "gpt-4o", None),
+    ("openrouter", "anthropic/claude-opus-4.6", None),
+    ("openai", "anthropic/claude-opus-4.6", "https://openrouter.ai/api/v1"),
+])
+def test_gap_resolves_known_comparison_tiers_without_mutating_members(provider, model, base_url):
+    frontier = Member(name="Frontier", provider_name=provider, model=model, base_url=base_url)
+    small = Member(name="Small", provider_name="ollama", model="tinyllama", tier=1)
+    unknown = Member(name="Unknown", provider_name="ollama", model="unassessed", tier=4)
+    members = [unknown, small, frontier]
+    gap = calculate_gap(members)
+    assert gap is not None
+    assert gap.strongest is frontier and gap.strongest_tier == 1
+    assert gap.weakest is small and gap.weakest_tier == 4
+    assert detect_gap(members)
+    assert [m.tier for m in members] == [4, 1, 3]
+    assert frontier.model == model
+
+
+@pytest.mark.parametrize("members", [
+    [],
+    [Member("Single", "openai", "gpt-4o")],
+    [Member("Unknown", "ollama", "unassessed"), Member("Known", "openai", "gpt-4o")],
+    [Member("A", "openai", "gpt-4o"), Member("B", "openai", "gpt-4o-mini")],
+    [Member("A", "openai", "gpt-4o"), Member("B", "google", "gemini-2.5-pro")],
+])
+def test_calculate_gap_returns_none_without_a_comparable_large_gap(members):
+    assert calculate_gap(members) is None
+    assert not detect_gap(members)
+
+
+def test_gap_and_resolution_preserve_supplied_mock_tiers():
+    strongest = Member("Mock strongest", "mock", "unlisted", tier=1)
+    weakest = Member("Mock weakest", "mock", "gpt-4o", tier=4)
+    gap = calculate_gap([weakest, strongest])
+    assert gap is not None
+    assert gap.strongest is strongest and gap.strongest_tier == 1
+    assert gap.weakest is weakest and gap.weakest_tier == 4
+    assert resolve_member_tier(strongest).tier == 1
+    assert resolve_member_tier(weakest).tier == 4

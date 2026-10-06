@@ -36,7 +36,7 @@ def test_gap_warning_ignores_unknown_even_when_selecting_warning_names():
     assert "Unknown" not in warnings[0]
 
 
-@pytest.mark.parametrize("provider", ["ollama", "mock", *KEY_PROVIDERS])
+@pytest.mark.parametrize("provider", ["ollama", *KEY_PROVIDERS])
 def test_gap_warnings_exclude_fallback_ratings_for_every_provider(provider):
     members = [
         Member(name="Unknown", provider_name=provider, model="unassessed-model"),
@@ -65,6 +65,26 @@ def test_unknown_model_remains_eligible_for_speaker_with_fallback_tier():
     assert [m.tier for m in parliament.members] == [3, 4]
     assert parliament.check_gaps() == []
     assert select_speaker(parliament.members, providers)[0].name == "Unknown"
+
+
+def test_gap_warning_uses_comparison_tiers_even_if_member_tiers_are_stale():
+    members = [Member("GPT", "openai", "gpt-4o"), Member("Tiny", "ollama", "tinyllama")]
+    providers = {m.name: MockProvider(model=m.model) for m in members}
+    parliament = Parliament(members, providers)
+    for member in members:
+        member.tier = 3
+    assert parliament.check_gaps() == [
+        "Large capability gap between GPT (tier 1) and Tiny (tier 4). "
+        "Debate quality is limited by the weakest member."
+    ]
+
+
+def test_runtime_gap_warning_preserves_explicit_mock_tiers():
+    members = [Member("Strong", "mock", "m", tier=1), Member("Weak", "mock", "m", tier=4)]
+    providers = {m.name: MockProvider(model=m.model) for m in members}
+    parliament = Parliament(members, providers)
+    assert [m.tier for m in parliament.members] == [1, 4]
+    assert "Strong (tier 1) and Weak (tier 4)" in parliament.check_gaps()[0]
 
 
 async def test_openrouter_suffix_aliases_select_stronger_speaker():

@@ -197,7 +197,7 @@ or much weaker. It retains the numeric tier and its display label, and remains
 eligible for automatic Speaker selection using that fallback tier.
 
 Capability-gap warnings compare **only models with known ratings, for every
-provider**, including Ollama, Anthropic and mock providers. Unknown models do
+provider**, including Ollama and Anthropic. Unknown models do
 not participate in this comparison, even when their fallback tier differs from
 a known model's tier. With fewer than two known models, no capability-gap
 warning is produced. Otherwise, a spread greater than one tier produces a
@@ -207,3 +207,9 @@ For example, GPT-4o (tier 1) and an unknown Ollama model (fallback tier 3)
 produce no gap warning. GPT-4o and known `llama3.1` (tier 3) do produce one,
 including when an unknown third member is present. This changes the previous
 behavior, which included unknown models' fallback tiers in gap comparisons.
+
+Programmatically constructed mock members are an exception: their supplied
+tiers are synthetic ratings used for testing and are preserved in gap
+comparisons and runtime tier resolution. Known real models' comparison tiers
+are resolved from the catalogue even if a directly constructed `Member` still
+has its default `tier=3`.

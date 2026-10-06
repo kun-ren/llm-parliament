@@ -11,9 +11,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Capability-gap warnings across all providers** — compare only models with
   known capability ratings. Unknown models retain fallback tier 3 and remain
   eligible for Speaker selection, but no longer participate in gap warnings.
-  This changes warning behavior for Ollama, Anthropic, mock and other providers
+  This changes warning behavior for Ollama, Anthropic and other providers
   as well as OpenRouter: the fallback is a default, not an assessed rating.
   Fewer than two known models produce no gap warning.
+  Explicit mock tiers are preserved as synthetic ratings for tests.
 
 ### Added
 
@@ -96,6 +97,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `providers/errors.py`, `docs/`, and `.github/`.
 
 ### Fixed
+
+- **Shared capability-gap calculation** — detection, runtime warnings and CLI
+  output use one calculation and the same comparison tiers. Known models are
+  resolved from the catalogue, so a directly constructed frontier member with
+  default tier 3 is compared correctly. Supplied mock tiers remain intact.
 
 - **OpenRouter endpoint tier context** — `provider: openai` with OpenRouter's
   registered endpoint now gets the same model tiers as `provider: openrouter`,

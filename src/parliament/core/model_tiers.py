@@ -7,6 +7,7 @@ No user configuration needed — this is internal.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from parliament.core.types import Member
@@ -118,17 +119,51 @@ def get_tier_label(tier: int) -> str:
     return TIER_LABELS.get(tier, "unknown")
 
 
+@dataclass(frozen=True)
+class TierGap:
+    strongest: Member
+    strongest_tier: int
+    weakest: Member
+    weakest_tier: int
+
+    def warning(self) -> str:
+        return (
+            f"Large capability gap between {self.strongest.name} (tier {self.strongest_tier}) "
+            f"and {self.weakest.name} (tier {self.weakest_tier}). "
+            "Debate quality is limited by the weakest member."
+        )
+
+
+def calculate_gap(members: list[Member]) -> TierGap | None:
+    """Compare assessed tiers without changing members; return only a large gap."""
+    comparisons: list[tuple[Member, int]] = []
+    for member in members:
+        # Mock tiers are supplied synthetic ratings, not unknown-model defaults.
+        if member.provider_name == "mock":
+            tier = member.tier
+        else:
+            model = canonical_model_id(member.model, member.provider_name, member.tier_base_url)
+            known_tier = MODEL_TIERS.get(model)
+            if known_tier is None:
+                continue
+            tier = known_tier
+        comparisons.append((member, tier))
+    if len(comparisons) < 2:
+        return None
+    strongest, strongest_tier = min(comparisons, key=lambda comparison: comparison[1])
+    weakest, weakest_tier = max(comparisons, key=lambda comparison: comparison[1])
+    if weakest_tier - strongest_tier <= 1:
+        return None
+    return TierGap(strongest, strongest_tier, weakest, weakest_tier)
+
+
 def detect_gap(members: list[Member]) -> bool:
     """True when the tier gap between classified members exceeds 1."""
-    tiers = [
-        m.tier for m in members if has_known_tier(m.model, m.provider_name, m.tier_base_url)
-    ]
-    if len(tiers) < 2:
-        return False
-    return max(tiers) - min(tiers) > 1
+    return calculate_gap(members) is not None
 
 
 def resolve_member_tier(member: Member) -> Member:
     """Resolve a member's tier in place, preserving its API model ID."""
-    member.tier = get_tier(member.model, member.provider_name, member.tier_base_url)
+    if member.provider_name != "mock":
+        member.tier = get_tier(member.model, member.provider_name, member.tier_base_url)
     return member
