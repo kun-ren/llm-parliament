@@ -55,8 +55,6 @@ MODEL_TIERS: dict[str, int] = {
 
 DEFAULT_TIER = 3
 
-# Explicit API spellings share capability tiers; do not strip tuning/version
-# suffixes globally, since unfamiliar versions and sizes need their own rating.
 MODEL_ALIASES: dict[str, dict[str, str]] = {
     "openrouter": {
         "gemini-2.0-flash-001": "gemini-2.0-flash",
@@ -99,6 +97,9 @@ def canonical_model_id(model: str, provider: str, base_url: str | None = None) -
                     provider = name
                     break
     if provider == "openrouter":
+        # Only OpenRouter tier identities omit vendor/ and :variant and change
+        # Claude version dots to dashes. Tuning/version suffixes require explicit
+        # aliases; stripping them globally could give unfamiliar models a rating.
         model = model.split("/", 1)[-1].split(":", 1)[0]
         if model.startswith("claude-"):
             model = re.sub(r"(?<=\d)\.(?=\d)", "-", model)

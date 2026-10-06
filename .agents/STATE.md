@@ -1,27 +1,25 @@
-﻿# State
+<!-- Hand-off between sessions on any machine, local or cloud. AGENTS.md imports it, so every
+     session starts with it. The hand-off rewrites it; it is not a log, and history belongs in git.
+     Keep it under ~40 lines; the SessionStart hook warns past 60. -->
+# State
 
-_Updated 2026-09-26_
+_Updated 2026-09-24_
 
 ## Now
-- Issue #37 tier fix implemented: provider-scoped OpenRouter identity resolution,
-  required provider arguments, known-only capability-gap warnings, and regression
-  coverage for config, TUI, runtime Speaker selection and unchanged API IDs.
-- `bash scripts/verify.sh` passed with the project `.venv` using Git Bash on Windows
-  (ruff, mypy, full pytest). Human commit identity verified as Kun Ren.
+- `main` is 0.2.0 plus unreleased changes (CHANGELOG `[Unreleased]`). CI is green:
+  ruff and mypy clean, 553 tests.
+- `chore/agent-workflow`: the agent workflow moves into `AGENTS.md` and `.agents/`, CLAUDE.md is
+  removed, and `scripts/verify.sh` runs the CI checks in one command.
 
 ## Next
-1. Post and discuss `docs/superpowers/plans/2026-09-26-openrouter-shortlist.md` on #37.
-   User authorized posting, but the connector returned 403 and no browser is available.
-2. Implement the shortlist after agreement; assess tiers of the two free candidates.
-3. OpenRouter docs/doctor #39 and wider roadmap #15 remain separate work.
+1. OpenRouter series: #37 (catalog presets), then #39 (docs and doctor). Order taken from the
+   issue titles; priority `unverified`.
+2. Roadmap and wider plans: #15.
 
 ## Decisions
-- Preserve API/config model IDs. Normalize only OpenRouter tier identities by removing
-  vendor/ and :variant, converting Claude version dots, then applying exceptional aliases.
-- Unknown models keep numeric tier 3 but cannot establish or appear in gap warnings.
-- Existing first-run presets and live discovery remain unchanged; shortlist is pending.
+- No per-tool agent files: coding agents read `AGENTS.md` directly, so CLAUDE.md is gone and
+  agent state lives under neutral names in `.agents/` (excluded from the sdist, like AGENTS.md).
+- `scripts/verify.sh` copies ci.yml's checks; `tests/test_verify_matches_ci.py` keeps them equal.
 
 ## Known issues
-- GitHub integration cannot post to #37 (403 Resource not accessible by integration).
-- Shortlist draft was checked against OpenRouter's public catalog on 2026-09-26;
-  availability and free pricing must be rechecked before implementing it.
+- None recorded.

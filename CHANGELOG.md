@@ -107,13 +107,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   registered endpoint now gets the same model tiers as `provider: openrouter`,
   including TUI previews, runtime Speaker selection and gap warnings.
 
-- **OpenRouter model aliases** — recognized Gemini, Llama, Mistral and Gemma
-  API names now receive their existing capability ratings, including known
-  tier-3 models that previously fell back to an unclassified tier 3.
-
-- **OpenRouter tier lookup** — normalizes vendor prefixes, variants and Claude
-  version spelling using the provider context. Known frontier models can be
-  selected as Speaker without rewriting their config or API model IDs.
+- **OpenRouter tier lookup** — recognized models now receive their catalogue
+  capability ratings. Known frontier models can be selected as Speaker without
+  rewriting their config or API model IDs.
   Addresses the tier portion of #37.
 
 - **`parliament ask --mock` now records the actual model for each member.**
