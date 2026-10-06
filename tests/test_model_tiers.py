@@ -127,6 +127,54 @@ def test_ollama_sizes_remain_distinct():
     assert get_tier("anthropic/claude-opus-4.6", "openai") == 3
 
 
+@pytest.mark.parametrize("base_url", [
+    "https://openrouter.ai/api/v1",
+    "https://openrouter.ai/api/v1/",
+    "https://OPENROUTER.AI:443/api/v1/",
+])
+@pytest.mark.parametrize(("model", "canonical", "tier"), [
+    ("anthropic/claude-opus-4.6:nitro", "claude-opus-4-6", 1),
+    ("meta-llama/llama-3.1-70b-instruct", "llama3.1:70b", 2),
+    ("google/gemma-2-9b-it:free", "gemma2:9b", 3),
+])
+def test_openai_at_openrouter_uses_the_same_tier_identity(base_url, model, canonical, tier):
+    assert canonical_model_id(model, "openai", base_url) == canonical
+    assert has_known_tier(model, "openai", base_url)
+    assert get_tier(model, "openai", base_url) == tier
+
+
+@pytest.mark.parametrize("base_url", [
+    None,
+    "",
+    "https://api.openai.com/v1",
+    "https://gateway.internal/v1",
+    "https://openrouter.ai.evil.example/api/v1",
+    "https://evil.example/openrouter.ai/api/v1",
+    "https://openrouter.ai/api/v10",
+    "https://openrouter.ai/api/v1/models",
+    "http://openrouter.ai/api/v1",
+    "https://openrouter.ai:8443/api/v1",
+    "https://openrouter.ai:0/api/v1",
+    "https://openrouter.ai:invalid/api/v1",
+    "https://[invalid/api/v1",
+    "https://openrouter.ai/api/v1?redirect=other",
+    "https://openrouter.ai/api/v1#other",
+    "https://user:secret@openrouter.ai/api/v1",
+])
+def test_other_endpoints_do_not_inherit_openrouter_rules(base_url):
+    model = "anthropic/claude-opus-4.6"
+    assert canonical_model_id(model, "openai", base_url) == model
+    assert not has_known_tier(model, "openai", base_url)
+    assert get_tier(model, "openai", base_url) == 3
+
+
+@pytest.mark.parametrize("provider", ["ollama", "anthropic", "google", "custom"])
+def test_endpoint_inference_is_limited_to_openai_compatible_configuration(provider):
+    base_url = "https://openrouter.ai/api/v1"
+    model = "user/model:tag"
+    assert canonical_model_id(model, provider, base_url) == model
+
+
 def test_alias_targets_are_canonical_tier_entries():
     for provider, aliases in MODEL_ALIASES.items():
         for alias, canonical in aliases.items():

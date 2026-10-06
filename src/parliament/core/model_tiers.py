@@ -7,8 +7,10 @@ No user configuration needed — this is internal.
 from __future__ import annotations
 
 import re
+from urllib.parse import urlsplit
 
 from parliament.core.types import Member
+from parliament.model_catalog import OPENAI_COMPATIBLE
 
 # Tier 1 = frontier, Tier 4 = small
 MODEL_TIERS: dict[str, int] = {
@@ -73,8 +75,28 @@ TIER_LABELS: dict[int, str] = {
 }
 
 
-def canonical_model_id(model: str, provider: str) -> str:
+def _endpoint_identity(base_url: str) -> tuple[str, str, int | None, str] | None:
+    try:
+        url = urlsplit(base_url)
+        if not url.hostname or url.username or url.password or url.query or url.fragment:
+            return None
+        port = url.port
+        if port is None:
+            port = {"https": 443, "http": 80}.get(url.scheme)
+        return url.scheme, url.hostname, port, url.path.rstrip("/")
+    except ValueError:
+        return None
+
+
+def canonical_model_id(model: str, provider: str, base_url: str | None = None) -> str:
     """Resolve an internal tier identity without changing the API model ID."""
+    if provider == "openai" and base_url:
+        endpoint = _endpoint_identity(base_url)
+        if endpoint is not None:
+            for name, spec in OPENAI_COMPATIBLE.items():
+                if endpoint == _endpoint_identity(spec.base_url):
+                    provider = name
+                    break
     if provider == "openrouter":
         model = model.split("/", 1)[-1].split(":", 1)[0]
         if model.startswith("claude-"):
@@ -82,14 +104,14 @@ def canonical_model_id(model: str, provider: str) -> str:
     return MODEL_ALIASES.get(provider, {}).get(model, model)
 
 
-def has_known_tier(model: str, provider: str) -> bool:
+def has_known_tier(model: str, provider: str, base_url: str | None = None) -> bool:
     """Distinguish classified tier-3 models from the unknown-model fallback."""
-    return canonical_model_id(model, provider) in MODEL_TIERS
+    return canonical_model_id(model, provider, base_url) in MODEL_TIERS
 
 
-def get_tier(model: str, provider: str) -> int:
+def get_tier(model: str, provider: str, base_url: str | None = None) -> int:
     """Return tier for a model name. Unknown models default to tier 3."""
-    return MODEL_TIERS.get(canonical_model_id(model, provider), DEFAULT_TIER)
+    return MODEL_TIERS.get(canonical_model_id(model, provider, base_url), DEFAULT_TIER)
 
 
 def get_tier_label(tier: int) -> str:
@@ -98,7 +120,9 @@ def get_tier_label(tier: int) -> str:
 
 def detect_gap(members: list[Member]) -> bool:
     """True when the tier gap between classified members exceeds 1."""
-    tiers = [m.tier for m in members if has_known_tier(m.model, m.provider_name)]
+    tiers = [
+        m.tier for m in members if has_known_tier(m.model, m.provider_name, m.tier_base_url)
+    ]
     if len(tiers) < 2:
         return False
     return max(tiers) - min(tiers) > 1
@@ -106,5 +130,5 @@ def detect_gap(members: list[Member]) -> bool:
 
 def resolve_member_tier(member: Member) -> Member:
     """Resolve a member's tier in place, preserving its API model ID."""
-    member.tier = get_tier(member.model, member.provider_name)
+    member.tier = get_tier(member.model, member.provider_name, member.tier_base_url)
     return member

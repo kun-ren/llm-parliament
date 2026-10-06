@@ -73,7 +73,7 @@ class Parliament:
         if len(members) > 3:
             raise ValueError("Parliament supports at most 3 members")
 
-        self.members = [resolve_member_tier(m) for m in members]
+        self.members = list(members)
         self.providers = providers
         self.on_progress = on_progress or _noop_progress
         self.speaker_override = speaker_override
@@ -82,6 +82,10 @@ class Parliament:
         for m in self.members:
             if m.name not in self.providers:
                 raise ValueError(f"No provider registered for member '{m.name}'")
+            base_url = self.providers[m.name].base_url
+            if base_url is not None:
+                m.tier_base_url = base_url
+            resolve_member_tier(m)
 
     async def ask(
         self,
@@ -178,7 +182,10 @@ class Parliament:
         """Return warning strings if tier gaps exist. Never blocks."""
         warnings = []
         if detect_gap(self.members):
-            known = [m for m in self.members if has_known_tier(m.model, m.provider_name)]
+            known = [
+                m for m in self.members
+                if has_known_tier(m.model, m.provider_name, m.tier_base_url)
+            ]
             weakest = max(known, key=lambda m: m.tier)
             strongest = min(known, key=lambda m: m.tier)
             warnings.append(

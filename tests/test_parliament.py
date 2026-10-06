@@ -47,6 +47,23 @@ async def test_openrouter_suffix_aliases_select_stronger_speaker():
     assert [m.model for m in hansard.members] == [p.model for p in providers.values()]
 
 
+def test_runtime_reads_endpoint_from_programmatically_created_providers():
+    from parliament.providers.openai_provider import OpenAIProvider
+
+    members = [
+        Member(name="Gemma", provider_name="openai", model="google/gemma-2-9b-it"),
+        Member(name="Opus", provider_name="openai", model="anthropic/claude-opus-4.6"),
+    ]
+    providers = {
+        m.name: OpenAIProvider(model=m.model, base_url="https://openrouter.ai/api/v1")
+        for m in members
+    }
+    parliament = Parliament(members, providers)
+    assert [m.tier for m in parliament.members] == [3, 1]
+    assert select_speaker(parliament.members, providers)[0].name == "Opus"
+    assert len(parliament.check_gaps()) == 1
+
+
 @pytest.fixture
 def mock_parliament_3():
     """3-member parliament with mock providers."""

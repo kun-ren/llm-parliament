@@ -88,6 +88,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **OpenRouter endpoint tier context** — `provider: openai` with OpenRouter's
+  registered endpoint now gets the same model tiers as `provider: openrouter`,
+  including TUI previews, runtime Speaker selection and gap warnings.
+
 - **OpenRouter model aliases** — recognized Gemini, Llama, Mistral and Gemma
   API names now receive their existing capability ratings, including known
   tier-3 models that previously fell back to an unclassified tier 3.
